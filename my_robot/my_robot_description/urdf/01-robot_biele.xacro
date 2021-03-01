@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="my_robot">
+    
+    <!--Lorsque le bâtit est importé il est décalé de l'origine, ces variables servent à le déplacer pour que l'axe des moteur coincide avec l'origine-->
+    <xacro:property name="distance_arriere_batit_axe_moteur" value="-0.041" />
+    <xacro:property name="distance_dessous_batit_axe_moteur" value="-0.01388" />
+    <xacro:property name="distance_gauche_batit_centre_batit" value="-0.064" />
+    <xacro:property name="masse_batit" value="0.52792" />
+
+    <xacro:property name="entraxe_moteur" value="0.1446" />
+
+    <xacro:property name="decalage_origine_roue" value="0.0128" />
+    <xacro:property name="roue_epaisseur" value="0.0156" />
+    <xacro:property name="roue_rayon" value="0.01835" />
+    <xacro:property name="masse_roue" value="0.02"/>
+
+    <!--DEFINITION DE MACRO-->
+    <xacro:macro name="creation_roues" params="position"> 
+    
+        <link name="roue_${position}">
+            
+            <visual>
+                <xacro:if value="${position=='gauche'}">
+                    <origin xyz="${-roue_rayon} ${decalage_origine_roue} ${roue_rayon}" rpy="${pi} 0.0 0.0" /> 
+                </xacro:if>
+
+                <xacro:if value="${position=='droite'}">
+                    <origin xyz="${-roue_rayon} ${-decalage_origine_roue} ${-roue_rayon}" rpy="0 0.0 0.0" />
+                </xacro:if>
+
+                <geometry>
+                    <mesh filename="package://my_robot_description/meshes/roue.STL" scale="1 1 1"/>
+                </geometry>
+            </visual>
+
+		    <collision>
+                <xacro:if value="${position=='gauche'}">
+                    <origin xyz="0.0 ${roue_epaisseur/2} 0.0" rpy="${pi/2} 0.0 0.0" /> 
+                </xacro:if>
+
+                <xacro:if value="${position=='droite'}">
+                    <origin xyz="0.0 ${-roue_epaisseur/2} 0.0" rpy="${pi/2} 0.0 0.0" />
+                </xacro:if>
+                
+                <geometry>
+                    <cylinder radius="${roue_rayon}" length="${roue_epaisseur}"/> 
+	            </geometry>
+		    </collision>
+            
+            <!--Prise de la matrice d'inertie d'un cylindre, pour simplifier étant donné que la roue est très proche d'un cylindre-->
+            <xacro:cylinder_inertial mass="${masse_roue}" r="${roue_rayon}" h="${roue_epaisseur}"/>
+            </link> 
+
+        <joint name="${position}_wheel_joint" type="continuous">
+            <xacro:if value="${position=='gauche'}">
+                <origin xyz="0.0 ${entraxe_moteur/2} 0.0" /> 
+            </xacro:if>
+
+            <xacro:if value="${position=='droite'}">
+                <origin xyz="0.0 ${-entraxe_moteur/2} 0.0" /> 
+            </xacro:if> 
+
+            <parent link="base_link"/>
+            <child link="roue_${position}"/> 
+            <axis xyz="0.0 1.0 0.0" />
+        </joint>
+    </xacro:macro>
+
+        <!-- MACROS -->
+    <xacro:macro name="box_inertial" params="mass l w h">
+        <inertial>
+                <mass value="${mass}" />
+                <inertia ixx="${mass/3*(w*w + h*h)}" ixy="${mass/4*l*w}" ixz="${mass/4*l*h}"
+                     iyy="${mass/3*(l*l + h*h)}" iyz="${mass/4*w*h}"
+                     izz="${mass/3*(l*l + w*w)}" />
+        </inertial>
+    </xacro:macro>
+    <xacro:macro name="cylinder_inertial" params="mass r h">
+        <inertial>
+                <mass value="${mass}" />
+                <inertia ixx="${mass/12*(3*r*r + h*h)}" ixy="0.0" ixz="0.0"
+                     iyy="${mass/12*(3*r*r + h*h)}" iyz="0.0"
+                     izz="${mass/2*(r*r)}" />
+        </inertial>
+    </xacro:macro>
+    <xacro:macro name="spherus_inertial" params="mass r">
+        <inertial>
+                <mass value="${mass}" />
+                <inertia ixx="${mass/5*2*(r*r)}" ixy="0.0" ixz="0.0"
+                     iyy="${mass/5*2*(r*r)}" iyz="0.0"
+                     izz="${mass/5*2*(r*r)}" />
+        </inertial>
+    </xacro:macro>
+
+    <!--SECTION PRINCIPALE-->
+    <link name="base_link">
+        <visual>
+            <origin xyz="${distance_arriere_batit_axe_moteur} ${distance_gauche_batit_centre_batit} ${distance_dessous_batit_axe_moteur}" rpy="0.0 0.0 0.0" />
+            <geometry>
+                <mesh filename="package://my_robot_description/meshes/batit.STL" scale="1 1 1"/>
+            </geometry>
+        </visual>
+        <inertial>
+                <!--Matrices d'inerties données par SolidWorks, les axes et le support de la bille sont en alluminium, 
+                les autres pièces sont imprimés en 3D en ABS, l'intérieur des pièce est en nid d'abeille, mais les pièces
+                étant fines, il y à très peu d'endroits ou on retrouve du nid d'abeille -->
+                <mass value="${masse_batit}" />
+                <inertia ixx="216.440077" ixy="11.153975" ixz="37.585887"
+                     iyy="198.151113" iyz="19.180359"
+                     izz="149.961523" />
+        </inertial>
+    </link>
+    
+    <xacro:creation_roues position="droite"/>
+    <xacro:creation_roues position="gauche"/>
+
+</robot> 
